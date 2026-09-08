@@ -42,6 +42,22 @@ class RedditAdapter(SourceAdapter):
         }
 
 
+class HackerNewsAdapter(RedditAdapter):
+    name = "hackernews"
+
+    def map_record(self, record: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "source_id": record.get("objectID", record.get("id", "")),
+            "text": record.get("comment_text", record.get("text", "")),
+            "author": record.get("author", ""),
+            "url": record.get("story_url", record.get("url", "")),
+            "published_at": record.get("created_at", record.get("published_at")),
+            "likes": record.get("points", record.get("likes", 0)),
+            "parent_id": record.get("parent_id"),
+            "metadata": record,
+        }
+
+
 class YouTubeAdapter(RedditAdapter):
     name = "youtube"
 
@@ -65,3 +81,13 @@ class SourceRegistry:
         except KeyError as exc:
             raise ValueError(f"Unknown source: {source}") from exc
         return adapter.from_records(records)
+
+    def collect_mixed_records(self, records: Iterable[dict[str, Any]], sources: Iterable[str]) -> list[Comment]:
+        requested = set(sources)
+        comments: list[Comment] = []
+        for record in records:
+            source = record.get("source")
+            if source not in requested:
+                raise ValueError(f"Source {source!r} is not requested")
+            comments.extend(self.collect_from_records(source, [record]))
+        return comments

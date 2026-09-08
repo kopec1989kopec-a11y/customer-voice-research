@@ -28,9 +28,18 @@ def render_markdown(result: AnalysisResult, title: str = "Untitled") -> str:
         f"- Duplicates removed: **{result.duplicates_removed}**",
         f"- Noise/spam removed: **{result.noise_removed}**",
         "",
-        "## Main customer signals",
+        "### Source coverage",
         "",
     ]
+    if result.source_counts:
+        lines.extend(f"- **{source}**: {count} comments" for source, count in sorted(result.source_counts.items()))
+    else:
+        lines.append("- No source metadata available")
+    lines.extend([
+        "",
+        "## Main customer signals",
+        "",
+    ])
     if not result.clusters:
         lines.append("No substantive customer signals were found in the supplied comments.")
         return "\n".join(lines) + "\n"

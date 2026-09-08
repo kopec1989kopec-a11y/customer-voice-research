@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import html
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Iterable
 
@@ -111,4 +111,5 @@ def analyze_comments(comments: Iterable[Comment], min_words: int = 4) -> Analysi
         duplicates_removed=len(rows) - noise_removed - len(kept),
         noise_removed=noise_removed,
         clusters=result_clusters,
+        source_counts=dict(Counter(comment.source for comment in rows)),
     )

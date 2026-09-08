@@ -56,6 +56,19 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
 
 The Markdown report includes source coverage, filtering statistics, ranked signals, evidence quotes, and a hook direction per signal.
 
+For a single combined dataset from several platforms:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
+  --sources youtube,reddit,hackernews \
+  --input examples/mixed_comments.jsonl \
+  --output /tmp/mixed-customer-voice.md \
+  --format markdown \
+  --title "Portable Blender"
+```
+
+Each JSONL row must contain a `source` field. The analyzer then performs one cross-source deduplication and reports coverage per source.
+
 ## Planned source adapters
 
 | Source | Collection path | Status |

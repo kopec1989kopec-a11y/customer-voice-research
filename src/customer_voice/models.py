@@ -33,3 +33,4 @@ class AnalysisResult:
     duplicates_removed: int
     noise_removed: int
     clusters: list[Cluster]
+    source_counts: dict[str, int] = field(default_factory=dict)
