@@ -17,6 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", required=True)
     parser.add_argument("--format", choices=["json", "markdown"], default="json")
     parser.add_argument("--title", default="Customer Voice")
+    parser.add_argument("--raw-output", help="Optional JSONL path for collected comments")
     return parser
 
 
@@ -36,6 +37,13 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.output).write_text("\n".join(summary) + render_markdown(result.analysis, title=args.title), encoding="utf-8")
     else:
         Path(args.output).write_text(json.dumps(asdict(result), ensure_ascii=False, indent=2, default=str) + "\n", encoding="utf-8")
+    if args.raw_output:
+        raw_lines = []
+        for comment in result.comments:
+            row = asdict(comment)
+            row["research_query"] = result.query
+            raw_lines.append(json.dumps(row, ensure_ascii=False, default=str))
+        Path(args.raw_output).write_text("\n".join(raw_lines) + ("\n" if raw_lines else ""), encoding="utf-8")
     print(f"query={result.query} discovered={result.discovery_count} comments={result.comment_count} skipped={result.skipped_sources}")
     return 0
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator
 
@@ -83,7 +84,7 @@ class YouTubeDiscovery:
         return subprocess.run(command, check=True, capture_output=True, text=True).stdout
 
     def search(self, query: str, limit: int = 10) -> list[DiscoveryItem]:
-        command = ["yt-dlp", "--dump-single-json", "--flat-playlist", "--skip-download", f"ytsearch{limit}:{query}"]
+        command = [sys.executable, "-m", "yt_dlp", "--dump-single-json", "--flat-playlist", "--skip-download", f"ytsearch{limit}:{query}"]
         payload = json.loads(self.runner(command))
         entries = payload.get("entries", [])[:limit]
         return [DiscoveryItem(

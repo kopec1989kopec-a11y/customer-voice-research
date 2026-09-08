@@ -84,8 +84,11 @@ For the complete query-to-report run:
 PYTHONPATH=src .venv/bin/python -m customer_voice.research_cli \
   --query "portable blender" \
   --limit 10 \
-  --output /tmp/research.json
+  --output /tmp/research.json \
+  --raw-output /tmp/research.raw.jsonl
 ```
+
+`--raw-output` writes one provenance-preserving JSON object per collected comment for later re-analysis. When `yt-dlp` is installed in the project virtualenv, YouTube discovery is invoked through the same Python interpreter (`python -m yt_dlp`), avoiding PATH mismatches.
 
 Use `--format markdown` for a human-readable report. The run records discovered items, collected comments, skipped sources, source coverage, collector pages/raw/emitted counts, deduplication, noise filtering, evidence quotes, and hooks. Collectors retry transient network failures with exponential backoff and avoid duplicate query collection when discovery returns multiple items from the same source.
 
