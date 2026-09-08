@@ -43,6 +43,19 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
   --output /tmp/customer-voice-report.json
 ```
 
+For a customer-facing evidence report:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
+  --source youtube \
+  --input examples/comments.jsonl \
+  --output /tmp/customer-voice-report.md \
+  --format markdown \
+  --title "Portable Blender"
+```
+
+The Markdown report includes source coverage, filtering statistics, ranked signals, evidence quotes, and a hook direction per signal.
+
 ## Planned source adapters
 
 | Source | Collection path | Status |
