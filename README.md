@@ -23,7 +23,10 @@ The first vertical slice is offline and deterministic:
 
 - normalized comment model with source, URL, date, likes, parent thread and metadata;
 - source adapter registry;
-- Reddit and YouTube record adapters;
+- Reddit thread collector with cursor pagination and public JSON endpoint;
+- YouTube collector that keeps the full `yt-dlp` comment payload when requested;
+- Hacker News collector through Algolia's paginated comment search;
+- offline fixtures for deterministic development;
 - deduplication across sources;
 - noise and link-spam filtering;
 - basic pain clusters (`cleaning`, `price`, `quality`, `usability`, `delivery`);
@@ -44,9 +47,9 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
 
 | Source | Collection path | Status |
 |---|---|---|
-| YouTube | `yt-dlp` for keyless collection; Data API for paginated collection/replies | adapter + offline path |
-| Reddit | public/API adapter with comment pagination | record adapter |
-| Hacker News | Algolia/API comments | planned |
+| YouTube | `yt-dlp` for keyless collection; Data API for paginated collection/replies | collector implemented; Data API next |
+| Reddit | public JSON endpoint with cursor pagination | collector implemented |
+| Hacker News | Algolia/API comments | collector implemented |
 | X | authenticated API/cookie-backed adapter where eligible | planned |
 | TikTok | ScrapeCreators or an approved provider | planned |
 | Instagram | ScrapeCreators or an approved provider | planned |
