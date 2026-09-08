@@ -1,0 +1,16 @@
+LICENSE
+README.md
+pyproject.toml
+src/customer_voice/__init__.py
+src/customer_voice/adapters.py
+src/customer_voice/cli.py
+src/customer_voice/core.py
+src/customer_voice/models.py
+src/customer_voice/report.py
+src/customer_voice_research.egg-info/PKG-INFO
+src/customer_voice_research.egg-info/SOURCES.txt
+src/customer_voice_research.egg-info/dependency_links.txt
+src/customer_voice_research.egg-info/requires.txt
+src/customer_voice_research.egg-info/top_level.txt
+tests/test_adapters.py
+tests/test_core.py
