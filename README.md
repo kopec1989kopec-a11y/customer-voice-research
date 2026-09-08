@@ -76,7 +76,7 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.discovery_cli \
   --output /tmp/discovery.json
 ```
 
-The discovery file contains source IDs, titles, URLs, authors, and raw metadata. A source that is blocked, rate-limited, or missing an optional local tool is skipped explicitly; the CLI never fabricates results from unavailable sources.
+The discovery file contains source IDs, titles, URLs, authors, and raw metadata. Results are ranked by query-term overlap in the title, then by engagement (`score`, `points`, `likes`, or `view_count`). Ranking is applied per source so one platform cannot crowd out all other sources. A source that is blocked, rate-limited, or missing an optional local tool is skipped explicitly; the CLI never fabricates results from unavailable sources.
 
 For the complete query-to-report run:
 

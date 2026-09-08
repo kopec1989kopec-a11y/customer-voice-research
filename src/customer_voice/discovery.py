@@ -6,6 +6,37 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator
 
 
+def _tokens(value: str) -> set[str]:
+    import re
+    return {token for token in re.findall(r"[a-z0-9а-яё]+", value.lower()) if len(token) > 2}
+
+
+def _engagement(item: "DiscoveryItem") -> float:
+    raw = item.metadata.get("raw", {}) if isinstance(item.metadata, dict) else {}
+    values = [item.metadata.get(key, 0) for key in ("score", "points", "likes", "view_count")]
+    values.extend(raw.get(key, 0) for key in ("score", "points", "like_count", "view_count"))
+    return max((float(value or 0) for value in values), default=0.0)
+
+
+def rank_items(query: str, items: list["DiscoveryItem"], limit: int | None = None, per_source: int | None = None) -> list["DiscoveryItem"]:
+    query_tokens = _tokens(query)
+
+    def key(item: DiscoveryItem) -> tuple[float, float]:
+        title_tokens = _tokens(item.title)
+        relevance = len(query_tokens & title_tokens) / max(len(query_tokens), 1)
+        return relevance, _engagement(item)
+
+    grouped: dict[str, list[DiscoveryItem]] = {}
+    for item in items:
+        grouped.setdefault(item.source, []).append(item)
+    selected: list[DiscoveryItem] = []
+    for source_items in grouped.values():
+        ranked = sorted(source_items, key=key, reverse=True)
+        selected.extend(ranked[:per_source] if per_source is not None else ranked)
+    selected.sort(key=key, reverse=True)
+    return selected[:limit] if limit is not None and per_source is None else selected
+
+
 @dataclass(frozen=True)
 class DiscoveryItem:
     source: str
@@ -76,7 +107,7 @@ class RedditDiscovery:
                     title=raw.get("title", ""),
                     url="https://www.reddit.com" + raw.get("permalink", ""),
                     author=raw.get("author", ""),
-                    metadata={"subreddit": raw.get("subreddit", ""), "raw": raw},
+                    metadata={"subreddit": raw.get("subreddit", ""), "score": raw.get("score", 0), "raw": raw},
                 ))
                 if len(items) >= limit:
                     break
@@ -115,7 +146,7 @@ class HackerNewsDiscovery:
                     title=raw.get("title", "") or raw.get("story_title", ""),
                     url=raw.get("url") or f"https://news.ycombinator.com/item?id={raw['objectID']}",
                     author=raw.get("author", ""),
-                    metadata={"raw": raw},
+                    metadata={"points": raw.get("points", 0), "raw": raw},
                 ))
                 if len(items) >= limit:
                     break
@@ -134,4 +165,4 @@ def discover_all(query: str, limit: int = 10, discoverers: list[Any] | None = No
         except (FileNotFoundError, OSError):
             # Optional tools and blocked/rate-limited sources must not block others.
             continue
-    return items
+    return rank_items(query, items, per_source=limit)
