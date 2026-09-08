@@ -2,8 +2,20 @@ from __future__ import annotations
 
 import json
 import subprocess
+import time
 from collections.abc import Callable, Iterable, Iterator
 from typing import Any
+
+
+def _retry_call(fn: Callable[[], Any], max_retries: int, backoff: float) -> Any:
+    for attempt in range(max_retries + 1):
+        try:
+            return fn()
+        except (OSError, TimeoutError):
+            if attempt >= max_retries:
+                raise
+            if backoff:
+                time.sleep(backoff * (2 ** attempt))
 
 from .core import normalize_comment
 from .models import Comment
@@ -19,8 +31,11 @@ class YouTubeCollector:
 
     name = "youtube"
 
-    def __init__(self, runner: Callable[[list[str]], str] | None = None):
+    def __init__(self, runner: Callable[[list[str]], str] | None = None, max_retries: int = 2, backoff: float = 1.0):
         self.runner = runner or self._run
+        self.max_retries = max_retries
+        self.backoff = backoff
+        self.stats = {"pages": 0, "raw_items": 0, "emitted_items": 0}
 
     @staticmethod
     def _run(command: list[str]) -> str:
@@ -40,14 +55,17 @@ class YouTubeCollector:
             f"youtube:comment_sort=top;max_comments={requested},all,{requested}",
             f"https://www.youtube.com/watch?v={video_id}",
         ]
-        payload = json.loads(self.runner(command))
+        payload = json.loads(_retry_call(lambda: self.runner(command), self.max_retries, self.backoff))
         comments = payload.get("comments") or []
+        self.stats["pages"] = 1
+        self.stats["raw_items"] = len(comments)
         if max_comments is not None:
             comments = comments[:max_comments]
         for raw in comments:
             text = raw.get("text") or ""
             if not text:
                 continue
+            self.stats["emitted_items"] += 1
             yield normalize_comment(
                 source=self.name,
                 source_id=raw.get("id", ""),
@@ -66,8 +84,11 @@ class HackerNewsCollector:
 
     name = "hackernews"
 
-    def __init__(self, fetch_page: Callable[[str, int], dict[str, Any]] | None = None):
+    def __init__(self, fetch_page: Callable[[str, int], dict[str, Any]] | None = None, max_retries: int = 2, backoff: float = 1.0):
         self.fetch_page = fetch_page or self._fetch_page
+        self.max_retries = max_retries
+        self.backoff = backoff
+        self.stats = {"pages": 0, "raw_items": 0, "emitted_items": 0}
 
     @staticmethod
     def _fetch_page(query: str, page: int) -> dict[str, Any]:
@@ -81,11 +102,15 @@ class HackerNewsCollector:
     def collect(self, query: str, max_pages: int | None = None) -> Iterator[Comment]:
         page = 0
         while max_pages is None or page < max_pages:
-            payload = self.fetch_page(query, page)
-            for raw in payload.get("hits", []):
+            payload = _retry_call(lambda: self.fetch_page(query, page), self.max_retries, self.backoff)
+            hits = payload.get("hits", [])
+            self.stats["pages"] += 1
+            self.stats["raw_items"] += len(hits)
+            for raw in hits:
                 text = raw.get("comment_text") or ""
                 if not text:
                     continue
+                self.stats["emitted_items"] += 1
                 yield normalize_comment(
                     source=self.name,
                     source_id=raw.get("objectID", ""),
@@ -132,24 +157,31 @@ class RedditCollector:
 
         return cls(fetch_page=fetch_page)
 
-    def __init__(self, fetch_page: Callable[[str | None], dict[str, Any]] | None = None):
+    def __init__(self, fetch_page: Callable[[str | None], dict[str, Any]] | None = None, max_retries: int = 2, backoff: float = 1.0):
         self.fetch_page = fetch_page
+        self.max_retries = max_retries
+        self.backoff = backoff
+        self.stats = {"pages": 0, "raw_items": 0, "emitted_items": 0}
 
     def collect_thread(self, thread_id: str) -> Iterator[Comment]:
         if self.fetch_page is None:
             raise RuntimeError("Provide a rate-limited Reddit fetch_page implementation")
         after: str | None = None
         while True:
-            payload = self.fetch_page(after)
+            payload = _retry_call(lambda: self.fetch_page(after), self.max_retries, self.backoff)
             listing = payload[1] if isinstance(payload, list) and len(payload) > 1 else payload
             data = listing.get("data", {})
-            for child in data.get("children", []):
+            self.stats["pages"] += 1
+            children = data.get("children", [])
+            self.stats["raw_items"] += len(children)
+            for child in children:
                 if child.get("kind") != "t1":
                     continue
                 raw = child.get("data", {})
                 body = raw.get("body", "")
                 if not body:
                     continue
+                self.stats["emitted_items"] += 1
                 yield normalize_comment(
                     source=self.name,
                     source_id=raw.get("id", ""),

@@ -87,7 +87,7 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.research_cli \
   --output /tmp/research.json
 ```
 
-Use `--format markdown` for a human-readable report. The run records discovered items, collected comments, skipped sources, source coverage, deduplication, noise filtering, evidence quotes, and hooks.
+Use `--format markdown` for a human-readable report. The run records discovered items, collected comments, skipped sources, source coverage, collector pages/raw/emitted counts, deduplication, noise filtering, evidence quotes, and hooks. Collectors retry transient network failures with exponential backoff and avoid duplicate query collection when discovery returns multiple items from the same source.
 
 ## Planned source adapters
 
