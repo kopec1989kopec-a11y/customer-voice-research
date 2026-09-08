@@ -69,6 +69,15 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.cli \
 
 Each JSONL row must contain a `source` field. The analyzer then performs one cross-source deduplication and reports coverage per source.
 
+```bash
+PYTHONPATH=src .venv/bin/python -m customer_voice.discovery_cli \
+  --query "portable blender" \
+  --limit 10 \
+  --output /tmp/discovery.json
+```
+
+The discovery file contains source IDs, titles, URLs, authors, and raw metadata. A source that is blocked, rate-limited, or missing an optional local tool is skipped explicitly; the CLI never fabricates results from unavailable sources.
+
 ## Planned source adapters
 
 | Source | Collection path | Status |
