@@ -11,29 +11,54 @@ def _tokens(value: str) -> set[str]:
     return {token for token in re.findall(r"[a-z0-9а-яё]+", value.lower()) if len(token) > 2}
 
 
+def _source_text(item: "DiscoveryItem") -> str:
+    metadata = item.metadata if isinstance(item.metadata, dict) else {}
+    raw = metadata.get("raw", {}) if isinstance(metadata.get("raw", {}), dict) else {}
+    fields = [item.title]
+    if item.source == "reddit":
+        fields.extend([str(metadata.get("subreddit", "")), str(raw.get("selftext", ""))])
+    elif item.source == "youtube":
+        fields.extend([str(metadata.get("channel", "")), str(raw.get("description", "")), str(raw.get("tags", ""))])
+    elif item.source == "hackernews":
+        fields.extend([str(raw.get("story_text", "")), str(raw.get("_tags", ""))])
+    return " ".join(fields)
+
+
+def _relevance(query: str, item: "DiscoveryItem") -> float:
+    query_tokens = _tokens(query)
+    text_tokens = _tokens(_source_text(item))
+    overlap = len(query_tokens & text_tokens) / max(len(query_tokens), 1)
+    compact_query = "".join(query.lower().split())
+    compact_text = "".join(_source_text(item).lower().split())
+    if compact_query and compact_query in compact_text:
+        overlap = max(overlap, 1.0)
+    return overlap
+
+
 def _engagement(item: "DiscoveryItem") -> float:
-    raw = item.metadata.get("raw", {}) if isinstance(item.metadata, dict) else {}
-    values = [item.metadata.get(key, 0) for key in ("score", "points", "likes", "view_count")]
+    metadata = item.metadata if isinstance(item.metadata, dict) else {}
+    raw = metadata.get("raw", {}) if isinstance(metadata.get("raw", {}), dict) else {}
+    values = [metadata.get(key, 0) for key in ("score", "points", "likes", "view_count")]
     values.extend(raw.get(key, 0) for key in ("score", "points", "like_count", "view_count"))
     return max((float(value or 0) for value in values), default=0.0)
 
 
 def rank_items(query: str, items: list["DiscoveryItem"], limit: int | None = None, per_source: int | None = None) -> list["DiscoveryItem"]:
-    query_tokens = _tokens(query)
-
-    def key(item: DiscoveryItem) -> tuple[float, float]:
-        title_tokens = _tokens(item.title)
-        relevance = len(query_tokens & title_tokens) / max(len(query_tokens), 1)
-        return relevance, _engagement(item)
+    import math
 
     grouped: dict[str, list[DiscoveryItem]] = {}
     for item in items:
         grouped.setdefault(item.source, []).append(item)
     selected: list[DiscoveryItem] = []
     for source_items in grouped.values():
+        max_engagement = max((_engagement(item) for item in source_items), default=0.0)
+
+        def key(item: DiscoveryItem) -> tuple[float, float]:
+            normalized_engagement = math.log1p(_engagement(item)) / max(math.log1p(max_engagement), 1.0)
+            return _relevance(query, item), normalized_engagement
+
         ranked = sorted(source_items, key=key, reverse=True)
         selected.extend(ranked[:per_source] if per_source is not None else ranked)
-    selected.sort(key=key, reverse=True)
     return selected[:limit] if limit is not None and per_source is None else selected
 
 
