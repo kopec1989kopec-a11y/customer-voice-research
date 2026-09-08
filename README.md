@@ -78,6 +78,17 @@ PYTHONPATH=src .venv/bin/python -m customer_voice.discovery_cli \
 
 The discovery file contains source IDs, titles, URLs, authors, and raw metadata. A source that is blocked, rate-limited, or missing an optional local tool is skipped explicitly; the CLI never fabricates results from unavailable sources.
 
+For the complete query-to-report run:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m customer_voice.research_cli \
+  --query "portable blender" \
+  --limit 10 \
+  --output /tmp/research.json
+```
+
+Use `--format markdown` for a human-readable report. The run records discovered items, collected comments, skipped sources, source coverage, deduplication, noise filtering, evidence quotes, and hooks.
+
 ## Planned source adapters
 
 | Source | Collection path | Status |
